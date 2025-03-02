@@ -1,0 +1,73 @@
+import pandas as pd
+from sklearn.model_selection import train_test_split
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import classification_report, confusion_matrix
+from sklearn.preprocessing import LabelEncoder
+import joblib
+
+# Load the preprocessed dataset
+file_path = '/content/Data_OA_Cancer_Diagnosis_Final_Modified.xlsx'
+data = pd.read_excel(file_path)
+
+# Encode the target variable
+le = LabelEncoder()
+data['Cancer Category'] = le.fit_transform(data['Cancer Category'])
+
+# Generate cancer mapping
+cancer_mapping = dict(zip(range(len(le.classes_)), le.classes_))
+print("Cancer Mapping:", cancer_mapping)
+
+# Feature and target selection
+X = data[['CRP (mg/L)', 'IL-6 Level (pg/mL)', 'TNF-α Level (pg/mL)', 
+          'COMP (pg/mL)', 'MMP-3 Level (ng/mL)', 'LDH (U/L)', 'ALP (U/L)', 'VEGF (pg/mL)', 'ESR (mm/hr)']]
+y = data['Cancer Category']
+
+# Train-test split
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+# Model training
+model = RandomForestClassifier(n_estimators=200, max_depth=10, min_samples_split=5, random_state=42)
+model.fit(X_train, y_train)
+
+# Model evaluation
+y_pred = model.predict(X_test)
+print("\nClassification Report:")
+print(classification_report(y_test, y_pred))
+
+# Confusion Matrix
+print("\nConfusion Matrix:")
+cm = confusion_matrix(y_test, y_pred)
+print(cm)
+
+# Feature Importances
+feature_importances = model.feature_importances_
+print("\nFeature Importances:")
+for feature, importance in zip(X.columns, feature_importances):
+    print(f"{feature}: {importance:.4f}")
+
+# Save the trained model
+joblib.dump(model, 'cancer_prediction_model.joblib')
+
+# Function for user input and prediction
+def predict_cancer():
+    print("\nPlease provide the following biomarker values:")
+    CRP = float(input("Enter CRP (mg/L): "))
+    IL6 = float(input("Enter IL-6 Level (pg/mL): "))
+    TNF_alpha = float(input("Enter TNF-α Level (pg/mL): "))
+    COMP = float(input("Enter COMP (pg/mL): "))
+    MMP3 = float(input("Enter MMP-3 Level (ng/mL): "))
+    LDH = float(input("Enter LDH (U/L): "))
+    ALP = float(input("Enter ALP (U/L): "))
+    VEGF = float(input("Enter VEGF (pg/mL): "))
+    ESR = float(input("Enter ESR (mm/hr): "))
+    
+    # Create a DataFrame for prediction
+    user_data = pd.DataFrame([[CRP, IL6, TNF_alpha, COMP, MMP3, LDH, ALP, VEGF, ESR]], 
+                             columns=['CRP (mg/L)', 'IL-6 Level (pg/mL)', 
+                                      'TNF-α Level (pg/mL)', 'COMP (pg/mL)', 
+                                      'MMP-3 Level (ng/mL)', 'LDH (U/L)', 'ALP (U/L)', 'VEGF (pg/mL)', 'ESR (mm/hr)'])
+    prediction = model.predict(user_data)
+    print(f"Predicted Diagnosis: {cancer_mapping[prediction[0]]}")
+
+# Call the function for prediction
+predict_cancer()
